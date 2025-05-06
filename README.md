@@ -71,5 +71,5 @@ $ node pokemon-showdown start --no-security
 ```
 2. 強化学習script実行
 ```
- python rl_with_new_open_ai_gym_wrapper.py
+ python3 rl_with_new_open_ai_gym_wrapper.py
 ```
