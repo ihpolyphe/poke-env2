@@ -6,11 +6,12 @@ from callbacks import FullTrainingLogger
 
 def main():
     opponent = RandomPlayer(battle_format="gen8randombattle")
-    train_env = GymEnvPlayer(opponent)
-    check_env(train_env, warn=True)
+    train_env = GymEnvPlayer()
+    train_env.player.opponent = opponent  # opponentを後から設定
 
     eval_opponent = RandomPlayer(battle_format="gen8randombattle")
-    eval_env = GymEnvPlayer(eval_opponent)
+    eval_env = GymEnvPlayer()
+    eval_env.player.opponent = eval_opponent
 
     win_logger = FullTrainingLogger(eval_env, eval_freq=1000, n_eval_episodes=5)
 
