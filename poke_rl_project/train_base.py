@@ -93,18 +93,18 @@ def train():
     opponent = MyRandomPlayer(battle_format="gen8randombattle")
     test_env = SimpleRLPlayer(
         battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
-        teambuilder=None
+        team="player_test"
     )
 
     opponent = MyRandomPlayer(battle_format="gen8randombattle")
     train_env = SimpleRLPlayer(
         battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
-        teambuilder=None
+        team="player_train"
     )
     opponent = MyRandomPlayer(battle_format="gen8randombattle")
     eval_env = SimpleRLPlayer(
         battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
-        teambuilder=None
+        team="player_eval"
     )
 
     win_logger = FullTrainingLogger(eval_env, eval_freq=1000, n_eval_episodes=5)
