@@ -16,12 +16,20 @@ from poke_env.player import (
 from poke_env.data import GenData
 from poke_env.player import RandomPlayer
 from poke_env.teambuilder.constant_teambuilder import ConstantTeambuilder
-
+from showdown_format import TEAM
+import sys
 
 class SimpleRLPlayer(Gen8EnvSinglePlayer):
     def __init__(self, team: str = "", **kwargs):
-        self._team = ConstantTeambuilder(team)  # ← これが必須！
-        super().__init__(**kwargs)
+        if team is None:
+            # self._team = RandomTeambuilder()  # ランダムチーム
+            # ランダム方法は定義できないので一旦exit
+            print("!!! チームをインポートしてください !!!")
+            sys.exit()
+        else:
+            self._team = ConstantTeambuilder(team)  # 固定チーム
+            print("import set team")
+            print(self._team)
         low = [-1, -1, -1, -1, 0, 0, 0, 0, 0, 0]
         high = [3, 3, 3, 3, 4, 4, 4, 4, 1, 1]
         self.observation_spaces = Box(
@@ -90,21 +98,21 @@ class MyRandomPlayer(RandomPlayer):
         super().__init__(battle_format=battle_format)
 
 def train():
-    opponent = MyRandomPlayer(battle_format="gen8randombattle")
+    opponent = MyRandomPlayer(battle_format="gen8randombattle",team=TEAM)
     test_env = SimpleRLPlayer(
         battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
-        team="player_test"
+        team=TEAM
     )
 
     opponent = MyRandomPlayer(battle_format="gen8randombattle")
     train_env = SimpleRLPlayer(
         battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
-        team="player_train"
+        team=TEAM
     )
     opponent = MyRandomPlayer(battle_format="gen8randombattle")
     eval_env = SimpleRLPlayer(
         battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
-        team="player_eval"
+        team=TEAM
     )
 
     win_logger = FullTrainingLogger(eval_env, eval_freq=1000, n_eval_episodes=5)
