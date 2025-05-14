@@ -12,6 +12,7 @@ from poke_env.player import (
     SimpleHeuristicsPlayer,
     background_cross_evaluate,
     background_evaluate_player,
+    BattleOrder
 )
 from poke_env.data import GenData
 from poke_env.player import RandomPlayer
@@ -40,7 +41,10 @@ class GymEnvPlayer(Env):
         self._current_battle = None
 
     def reset(self, seed=None, options=None):
-        self.player.reset_battles()
+        if isinstance(self.player, SimpleRLPlayer):
+            self.player._battles = dict()
+        else:
+            self.player.reset_battles()
 
         # バトルが開始するまで待機
         while len(self.player.battles) == 0:
@@ -68,8 +72,8 @@ class GymEnvPlayer(Env):
         reward = self.player.calc_reward(battle)
         done = battle.finished
         return obs, reward, done, False, {}
-
-class SimpleRLPlayer(Gen8EnvSinglePlayer):
+from poke_env.player.player import Player
+class SimpleRLPlayer(Player):
     def __init__(self, team: str = "", **kwargs):
         if team is None:
             # self._team = RandomTeambuilder()  # ランダムチーム
@@ -133,6 +137,12 @@ class SimpleRLPlayer(Gen8EnvSinglePlayer):
             np.array(high, dtype=np.float32),
             dtype=np.float32,
         )
+    
+    def reset_battles(self):
+        self._battles = dict()
+
+    def choose_move(self, battle: AbstractBattle) -> BattleOrder:
+        return self.choose_random_move(battle)
 
     @property
     def current_battle(self):

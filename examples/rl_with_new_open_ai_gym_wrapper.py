@@ -70,6 +70,8 @@ class SimpleRLPlayer(Gen8EnvSinglePlayer):
                 [fainted_mon_team, fainted_mon_opponent],
             ]
         )
+        print("embed_battle vector shape:", final_vector.shape)
+        print("embed_battle vector:", final_vector)
         return np.float32(final_vector)
 
     def describe_embedding(self) -> Space:
@@ -92,13 +94,14 @@ async def main():
     )
     # 環境が決定論的でないためチェックとおらない
     # check_env(test_env)
-    test_env.close()
+    # test_env.close()
 
     print("make train env")
     # Create one environment for training and one for evaluation
     opponent = RandomPlayer(battle_format="gen8randombattle")
     train_env = SimpleRLPlayer(
-        battle_format="gen8randombattle", opponent=opponent, start_challenging=True
+        battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
+        # observation_type="embedded"
     )
 
     print("make eval env")
@@ -149,7 +152,7 @@ async def main():
     print("train model")
     # Training the model
     dqn.fit(train_env, nb_steps=10000)
-    train_env.close()
+    # train_env.close()
 
     # Evaluating the model
     print("Results against random player:")
