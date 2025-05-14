@@ -19,6 +19,56 @@ from poke_env.teambuilder.constant_teambuilder import ConstantTeambuilder
 from showdown_format import TEAM
 import sys
 
+import asyncio
+from gymnasium import Env
+from gymnasium.spaces import Box, Discrete
+from poke_env.player import Player
+from stable_baselines3.common.callbacks import EvalCallback
+
+class GymEnvPlayer(Env):
+    def __init__(self, team: str = TEAM, opponent: Player = None):
+        super().__init__()
+        if opponent is None:
+            opponent = MyRandomPlayer(battle_format="gen8randombattle", team=team)
+
+        self.player = SimpleRLPlayer(
+            battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
+            team=TEAM
+        )
+        self.action_space = Discrete(4)
+        self.observation_space = Box(low=-1, high=4, shape=(10,), dtype=np.float32)
+        self._current_battle = None
+
+    def reset(self, seed=None, options=None):
+        self.player.reset_battles()
+
+        # バトルが開始するまで待機
+        while len(self.player.battles) == 0:
+            asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
+
+        # 最初のバトルを取得
+        self._current_battle = next(iter(self.player.battles.values()))
+        obs = self.player.embed_battle(self._current_battle)
+        return obs, {}
+
+    def step(self, action: int):
+        battle = self._current_battle
+
+        if action < len(battle.available_moves):
+            move = battle.available_moves[action]
+        else:
+            move = battle.available_moves[0]
+
+        self.player._send_move(move)
+
+        while not battle.finished and not battle.can_execute_command:
+            asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
+
+        obs = self.player.embed_battle(battle)
+        reward = self.player.calc_reward(battle)
+        done = battle.finished
+        return obs, reward, done, False, {}
+
 class SimpleRLPlayer(Gen8EnvSinglePlayer):
     def __init__(self, team: str = "", **kwargs):
         if team is None:
@@ -99,24 +149,12 @@ class MyRandomPlayer(RandomPlayer):
 
 def train():
     opponent = MyRandomPlayer(battle_format="gen8randombattle",team=TEAM)
-    test_env = SimpleRLPlayer(
-        battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
-        team=TEAM
-    )
+    train_env = GymEnvPlayer(team=TEAM, opponent=opponent)
+    eval_env = GymEnvPlayer(team=TEAM, opponent=MyRandomPlayer(team=TEAM))
 
-    opponent = MyRandomPlayer(battle_format="gen8randombattle")
-    train_env = SimpleRLPlayer(
-        battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
-        team=TEAM
-    )
-    opponent = MyRandomPlayer(battle_format="gen8randombattle")
-    eval_env = SimpleRLPlayer(
-        battle_format="gen8randombattle", opponent=opponent, start_challenging=True,
-        team=TEAM
-    )
-
-    win_logger = FullTrainingLogger(eval_env, eval_freq=1000, n_eval_episodes=5)
-
+    eval_callback = EvalCallback(eval_env, best_model_save_path="./logs/",
+                             log_path="./logs/", eval_freq=5000,
+                             deterministic=True, render=False)
     model = DQN(
         "MlpPolicy",
         train_env,
@@ -126,11 +164,9 @@ def train():
         exploration_final_eps=0.05,
         verbose=1
     )
-    model.learn(total_timesteps=20000, callback=win_logger)
+    model.learn(total_timesteps=20000, callback=eval_callback)
     model.save("dqn_pokemon_model")
 
-    # 勝率のプロット表示
-    win_logger.plot_all()
 
 if __name__ == "__main__":
     train()
